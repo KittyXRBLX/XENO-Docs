@@ -494,10 +494,13 @@
             to { transform: rotate(360deg); }
         }
         
+        /* FIX: Use align-items: start so cards don't stretch to match the tallest
+           card in the same row. This prevents the huge gap on cards without thumbnails. */
         #scriptsContainer {
             display: grid;
             gap: 1.75rem;
             grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            align-items: start;
         }
         
         .script-card {
@@ -544,6 +547,13 @@
             border-radius: 12px;
             margin-bottom: 1.25rem;
             border: 1px solid var(--border-subtle);
+            /* Prevent broken image from taking up space */
+            display: block;
+        }
+
+        /* Hide broken/missing images cleanly so they leave no gap */
+        .script-thumbnail[src=""], .script-thumbnail:not([src]) {
+            display: none;
         }
         
         .script-card-header {
@@ -1114,16 +1124,21 @@
                     badges += '<span class="badge verified">Verified</span>';
                 }
 
-                let thumbnailHtml = '';
-                // Check for images in order: game image, script image, or image URL
+                // Only render thumbnail if there's actually an image URL
                 const imageUrl = (script.game && script.game.imageUrl) || script.scriptImage || script.image || script.imageUrl;
                 
                 if (imageUrl) {
-                    thumbnailHtml = `<img src="${imageUrl}" alt="${escapeHtml(script.title || 'Script')}" class="script-thumbnail" onerror="this.remove()">`;
+                    const thumb = document.createElement('img');
+                    thumb.src = imageUrl;
+                    thumb.alt = script.title || 'Script';
+                    thumb.className = 'script-thumbnail';
+                    // If image fails to load, remove it entirely so it leaves no gap
+                    thumb.onerror = function() { this.remove(); };
+                    scriptCard.appendChild(thumb);
                 }
 
-                scriptCard.innerHTML = `
-                    ${thumbnailHtml}
+                const rest = document.createElement('div');
+                rest.innerHTML = `
                     <div class="script-card-header">
                         <strong>${escapeHtml(script.title || 'Untitled Script')}</strong>
                         <div class="script-badges">
@@ -1133,13 +1148,11 @@
                     ${script.game ? `<p style="color: var(--text-muted); margin-bottom: 1rem;">Game: ${escapeHtml(script.game.name || 'Unknown')}</p>` : ''}
                     <pre>${escapeHtml(script.script || 'No script content available')}</pre>
                     <div class="script-actions">
-                        <button class="copy-btn">
-                            Copy Script
-                        </button>
+                        <button class="copy-btn">Copy Script</button>
                     </div>
                 `;
+                scriptCard.appendChild(rest);
 
-                // Add event listener for copy button
                 const copyBtn = scriptCard.querySelector('.copy-btn');
                 copyBtn.addEventListener('click', () => {
                     copyScript(script.script || '');
@@ -1189,7 +1202,6 @@
         searchInput.addEventListener('input', filterScripts);
         refreshBtn.addEventListener('click', fetchScripts);
 
-        // Make copyScript available globally
         window.copyScript = copyScript;
     </script>
 </body>
