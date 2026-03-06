@@ -494,15 +494,14 @@
             to { transform: rotate(360deg); }
         }
         
-        /* FIX: Use align-items: start so cards don't stretch to match the tallest
-           card in the same row. This prevents the huge gap on cards without thumbnails. */
+        /* Masonry-style column layout — cards pack tightly with no row-height gaps */
         #scriptsContainer {
-            display: grid;
-            gap: 1.75rem;
-            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-            align-items: start;
+            columns: 2;
+            column-gap: 1.75rem;
         }
-        
+
+        /* Single column on mobile (already handled by media query below) */
+
         .script-card {
             background: var(--bg-card);
             border: 1px solid var(--border-subtle);
@@ -512,6 +511,11 @@
             animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
             position: relative;
             overflow: hidden;
+            /* Required for column layout: prevents card from splitting across columns */
+            break-inside: avoid;
+            margin-bottom: 1.75rem;
+            display: inline-block;
+            width: 100%;
         }
         
         .script-card::before {
@@ -810,7 +814,7 @@
             }
             
             #scriptsContainer {
-                grid-template-columns: 1fr;
+                columns: 1;
             }
             
             .content {
