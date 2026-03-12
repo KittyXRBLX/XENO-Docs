@@ -1850,47 +1850,37 @@
 
             // Encode entire script as decimal escape sequences — works in all Lua/Luau versions
             // This is the same technique WeAreDevs uses
-            function decimalEncode(str) {
-                let out = '';
-                for (let i = 0; i < str.length; i++) {
-                    const c = str.charCodeAt(i);
-                    out += '\\' + String(c).padStart(3, '0');
-                }
-                return out;
+            // Escape a string safely for use inside a Lua double-quoted string
+            function luaEscape(str) {
+                return str
+                    .replace(/\\/g, '\\\\')
+                    .replace(/"/g, '\\"')
+                    .replace(/\n/g, '\\n')
+                    .replace(/\r/g, '\\r')
+                    .replace(/\0/g, '\\0');
             }
 
-            // Wrap the script in a loadstring(table.concat({...})) shell
-            // Using only string.byte/string.char and table.concat — universally compatible
+            // Wrap in loadstring() — output stays roughly same size as input
             function wrapLoad(src, level) {
                 let current = src;
                 for (let i = 0; i < level; i++) {
-                    // Encode current source as decimal byte array
-                    const bytes = [];
-                    for (let j = 0; j < current.length; j++) {
-                        bytes.push(current.charCodeAt(j));
-                    }
-
-                    // Build chunked string table entries (WeAreDevs style)
-                    // Each entry is a Lua string with decimal escapes
-                    const CHUNK = 50;
-                    const entries = [];
-                    for (let j = 0; j < bytes.length; j += CHUNK) {
-                        const chunk = bytes.slice(j, j + CHUNK);
-                        entries.push('"' + chunk.map(b => '\\' + String(b).padStart(3,'0')).join('') + '"');
-                    }
-
-                    const tv = randIdent();
                     const fv = randIdent();
-                    const rv = randIdent();
-
+                    const sv = randIdent();
+                    // Use [[...]] multiline string to avoid escaping issues
+                    // But first check if [[ ]] appears in source — if so use escaped string
+                    const hasMultiline = current.includes('[[') || current.includes(']]');
+                    let strLiteral;
+                    if (hasMultiline) {
+                        strLiteral = `"${luaEscape(current)}"`;
+                    } else {
+                        strLiteral = `[[${current}]]`;
+                    }
                     current = [
-                        `--[[ KittyScripts Obfuscator BETA ${randHex(16)} ]]`,
-                        `local ${tv}={${entries.join(';')}}`,
-                        `local ${rv}=table.concat(${tv})`,
-                        `local ${fv}=loadstring(${rv})`,
-                        level === 3 ? `--[[ ${randHex(32)} ]]\n--[[ ${randHex(32)} ]]` : '',
+                        `--[[ KittyScripts Obfuscator BETA ]]`,
+                        `local ${sv}=${strLiteral}`,
+                        `local ${fv}=loadstring(${sv})`,
                         `if ${fv} then ${fv}() end`,
-                    ].filter(Boolean).join('\n');
+                    ].join('\n');
                 }
                 return current;
             }
