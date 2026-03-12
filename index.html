@@ -1230,7 +1230,10 @@
                 <div class="obf-panel">
                     <div class="obf-panel-header">
                         <span class="obf-panel-label">Obfuscated Output</span>
-                        <button class="obf-panel-btn" id="obfCopyBtn" disabled>Copy</button>
+                        <div style="display:flex;gap:0.5rem;">
+                            <button class="obf-panel-btn" id="obfSelectBtn" disabled>Select All</button>
+                            <button class="obf-panel-btn" id="obfCopyBtn" disabled>Copy</button>
+                        </div>
                     </div>
                     <textarea class="obf-textarea" id="obfOutput" placeholder="-- Obfuscated script will appear here..." readonly></textarea>
                 </div>
@@ -1665,7 +1668,8 @@
             const output   = document.getElementById('obfOutput');
             const runBtn   = document.getElementById('obfRunBtn');
             const clearBtn = document.getElementById('obfClearBtn');
-            const copyBtn  = document.getElementById('obfCopyBtn');
+            const copyBtn   = document.getElementById('obfCopyBtn');
+            const selectBtn = document.getElementById('obfSelectBtn');
             const pasteBtn = document.getElementById('obfPasteBtn');
             const statsEl  = document.getElementById('obfStats');
             let obfLevel   = 2;
@@ -1901,6 +1905,7 @@
                         const result = obfuscate(src, obfLevel);
                         output.value = result;
                         copyBtn.disabled = false;
+                        selectBtn.disabled = false;
                         const ratio = ((result.length / src.length) * 100).toFixed(0);
                         statsEl.innerHTML = `Input: <span>${src.length.toLocaleString()}</span> chars → Output: <span>${result.length.toLocaleString()}</span> chars (<span>${ratio}%</span> size)`;
                         showToast('🔒 Script obfuscated!', 'success');
@@ -1912,10 +1917,18 @@
                 }, 80);
             });
 
+            selectBtn.addEventListener('click', () => {
+                output.focus();
+                output.select();
+                selectBtn.textContent = 'Selected!';
+                setTimeout(() => selectBtn.textContent = 'Select All', 2000);
+            });
+
             clearBtn.addEventListener('click', () => {
                 input.value = '';
                 output.value = '';
                 copyBtn.disabled = true;
+                selectBtn.disabled = true;
                 statsEl.innerHTML = '';
             });
 
