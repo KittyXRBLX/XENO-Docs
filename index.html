@@ -1884,36 +1884,22 @@
                     const rv = randIdent();
 
                     current = [
-                        `--[[ KittyScripts Obfuscator BETA ]]`,
+                        `--[[ KittyScripts Obfuscator BETA ${randHex(16)} ]]`,
                         `local ${tv}={${entries.join(';')}}`,
                         `local ${rv}=table.concat(${tv})`,
                         `local ${fv}=loadstring(${rv})`,
+                        level === 3 ? `--[[ ${randHex(32)} ]]\n--[[ ${randHex(32)} ]]` : '',
                         `if ${fv} then ${fv}() end`,
-                    ].join('\n');
+                    ].filter(Boolean).join('\n');
                 }
                 return current;
             }
 
             // ── Main pipeline ──
             function obfuscate(src, level) {
-                // Steps 1-4 (rename, junk inject, string encode) run on the raw source
-                // Then the whole thing gets wrapped in loadstring() shells
-                // This means even if steps 1-4 had minor issues, the loadstring
-                // wrapper would still catch and run the original logic correctly
-
-                // For reliability: on Low/Medium, skip steps 1-4 entirely
-                // and ONLY do the loadstring wrapping (guaranteed to work)
-                // On Max, also do variable renaming + junk injection on top
-                let processed = src;
-
-                if (level === 3) {
-                    const { src: stripped, strings } = extractStrings(src);
-                    let renamed = renameLocals(stripped);
-                    renamed = injectJunk(renamed, 2);
-                    processed = restoreStrings(renamed, strings, false, level); // don't encode strings, loadstring handles it
-                }
-
-                return wrapLoad(processed, level);
+                // Low = 1 layer, Medium = 2 layers, Max = 3 layers
+                // All levels just use loadstring wrapping — it's the safest and works every time
+                return wrapLoad(src, level);
             }
 
             // ── UI ──
