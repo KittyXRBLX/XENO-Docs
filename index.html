@@ -689,14 +689,6 @@
         .obf-run-btn.running { opacity: 0.7; cursor: not-allowed; }
         .obf-clear-btn { background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: 12px; padding: 0.85rem 1.25rem; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; }
         .obf-clear-btn:hover { border-color: var(--danger); color: var(--danger); }
-        .obf-layers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
-        @media (max-width: 900px) { .obf-layers { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 500px) { .obf-layers { grid-template-columns: 1fr; } }
-        .obf-layer-card { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
-        .obf-layer-icon { font-size: 1.4rem; }
-        .obf-layer-title { font-weight: 800; font-size: 0.9rem; color: var(--text-primary); }
-        .obf-layer-desc { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; }
-        .obf-layer-desc code { color: var(--accent-bright); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; }
     </style>
 </head>
 
@@ -887,12 +879,8 @@
                 </div>
             </div>
 
-            <div class="obf-layers">
-                <div class="obf-layer-card"><div class="obf-layer-icon">🔀</div><div class="obf-layer-title">Split Tables</div><div class="obf-layer-desc">Byte array split into <code>3–6</code> randomly named sub-tables merged at runtime.</div></div>
-                <div class="obf-layer-card"><div class="obf-layer-icon">🔐</div><div class="obf-layer-title">XOR + Shift</div><div class="obf-layer-desc">Each byte encoded with two independent keys: <code>(b XOR k1 + k2) % 256</code>.</div></div>
-                <div class="obf-layer-card"><div class="obf-layer-icon">🗑️</div><div class="obf-layer-title">Junk Injection</div><div class="obf-layer-desc">Dead <code>math</code>, <code>string</code> and <code>type()</code> calls scattered between every section.</div></div>
-                <div class="obf-layer-card"><div class="obf-layer-icon">🏷️</div><div class="obf-layer-title">Name Mangling</div><div class="obf-layer-desc">All variables use <code>l1IlI</code> / <code>_0xhex</code> mixed names — visually unreadable.</div></div>
-            </div>
+            <!-- Feature info cards removed -->
+
         </div>
     </section>
 
@@ -1243,7 +1231,6 @@
             const statsEl   = document.getElementById('obfStats');
             let obfLevel    = 2;
 
-            // ── Level button wiring ──
             document.querySelectorAll('.obf-level-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.obf-level-btn').forEach(b => b.classList.remove('active'));
@@ -1252,11 +1239,9 @@
                 });
             });
 
-            // ── Utilities ──
             function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
             function randHex(len)   { let s=''; for (let i=0;i<len;i++) s+='0123456789abcdef'[rand(0,15)]; return s; }
 
-            // Name generator — mix of _0xhex and l1IlI-style names
             const PREFIXES = ['_0x','_L','_R','__','_x','lI','Il','l1'];
             const CONFUSE   = 'lI1lIl1IlI1lI1Il'.split('');
             function randIdent() {
@@ -1268,8 +1253,6 @@
                 return p + body;
             }
 
-            // ── Junk line generator ──
-            // Produces valid Lua that does nothing useful
             function junkLine() {
                 const flavors = [
                     () => `local ${randIdent()} = ${rand(0,9999)} * ${rand(1,99)} + ${rand(0,99)}`,
@@ -1284,8 +1267,6 @@
             }
             function addJunk(n) { return Array.from({ length: n }, junkLine); }
 
-            // ── XOR helper emitted into Lua ──
-            // Pure bit-loop XOR — compatible with all Roblox Lua versions (no bit32 needed)
             function emitXorHelper(fnName) {
                 const a=randIdent(), b=randIdent(), r=randIdent(), i=randIdent(), ba=randIdent(), bb=randIdent();
                 return [
@@ -1301,14 +1282,10 @@
                 ];
             }
 
-            // ── Encode bytes with XOR + shift ──
-            // Encoded value = (byte XOR xorKey + shift) % 256
-            // Lua decode:   byte = XOR( (val - shift + 256) % 256, xorKey )
             function encodeBytes(utf8Bytes, shift, xorKey) {
                 return utf8Bytes.map(b => ((b ^ xorKey) + shift) % 256);
             }
 
-            // ── Split encoded array into N named sub-tables, emit merge loop ──
             function emitSplitTables(encoded) {
                 const numParts = rand(3, 6);
                 const partSize = Math.ceil(encoded.length / numParts);
@@ -1334,7 +1311,6 @@
                 return { lines, merged };
             }
 
-            // ── Build one obfuscation layer ──
             function buildLayer(src, junkDensity) {
                 const enc    = new TextEncoder();
                 const utf8   = Array.from(enc.encode(src));
@@ -1379,7 +1355,6 @@
                 return allLines.join('\n');
             }
 
-            // ── Multi-layer entry ──
             function obfuscate(src, levels) {
                 let current = src;
                 for (let i = 0; i < levels; i++) {
@@ -1389,7 +1364,6 @@
                 return current;
             }
 
-            // ── Button handlers ──
             runBtn.addEventListener('click', () => {
                 const src = input.value.trim();
                 if (!src) { showToast('Paste a script first!', 'error'); return; }
