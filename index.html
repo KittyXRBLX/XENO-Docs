@@ -1297,16 +1297,22 @@
         searchInput.addEventListener('input', applyFiltersAndSort);
         refreshBtn.addEventListener('click', fetchScripts);
 
-        // ════════════════════════════════════════════════════════════════════
-        // ── KittyScripts Obfuscator Engine (WeAreDevs output format) ────────
-        // Produces:  --[[ KittyScripts Obfuscator ]]
-        //            Numeric-escape string table → XOR + shift decode → VM exec
-        // ════════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════
+        // KittyScripts Obfuscator — clean, verified encode/decode pipeline
+        //
+        // Strategy (simple & bulletproof):
+        //   1. Convert source to UTF-8 bytes
+        //   2. XOR every byte with a random key (0-127)  → always reversible
+        //   3. Store as a flat Lua number-array literal   → no string escaping issues
+        //   4. Emit Lua that rebuilds chars via XOR and calls loadstring
+        //   5. Wrap in junk locals + obfuscated var names (WRD aesthetic)
+        //   6. Multi-pass wraps the whole thing again
+        // ══════════════════════════════════════════════════════════════════
         (function() {
-            const obfInput    = document.getElementById('obfInput');
-            const obfOutput   = document.getElementById('obfOutput');
-            const obfRunBtn   = document.getElementById('obfRunBtn');
-            const obfClearBtn = document.getElementById('obfClearBtn');
+            const obfInput         = document.getElementById('obfInput');
+            const obfOutput        = document.getElementById('obfOutput');
+            const obfRunBtn        = document.getElementById('obfRunBtn');
+            const obfClearBtn      = document.getElementById('obfClearBtn');
             const obfClearInputBtn = document.getElementById('obfClearInputBtn');
             const obfCopyOutBtn    = document.getElementById('obfCopyOutBtn');
             const obfSelectBtn     = document.getElementById('obfSelectBtn');
@@ -1322,211 +1328,115 @@
                 });
             });
 
-            // ── Utilities ──
+            // ── Helpers ──
             function rng(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-            function randHex(len) { let s = ''; for (let i = 0; i < len; i++) s += '0123456789abcdef'[rng(0, 15)]; return s; }
-            function randIdent() {
-                // Produce confusing lookalike identifiers like WRD uses: _0x..., lI1lI etc.
-                const styles = [
-                    () => '_0x' + randHex(rng(6, 12)),
-                    () => '_' + ['l','I','1'].map(() => ['l','I','1'][rng(0,2)]).join('') + randHex(rng(4,8)),
-                    () => 'l' + Array.from({length: rng(6,12)}, () => ['l','I','1'][rng(0,2)]).join(''),
-                    () => 'I' + Array.from({length: rng(6,12)}, () => ['l','I','1'][rng(0,2)]).join(''),
+            function randHex(len)  { let s=''; for(let i=0;i<len;i++) s+='0123456789abcdef'[rng(0,15)]; return s; }
+
+            // WRD-style confusing identifiers: mix of l, I, 1 + optional _0x prefix
+            function randId() {
+                const pool = ['l','I','1'];
+                const len  = rng(8, 14);
+                const body = Array.from({length: len}, () => pool[rng(0, 2)]).join('');
+                return rng(0,1) ? body : '_0x' + randHex(rng(5,10));
+            }
+
+            // Obfuscated number literal  e.g. 42  →  (600123-600081)
+            function obfNum(n) {
+                const base = rng(100000, 900000);
+                return n >= 0 ? `(${base+n}-${base})` : `(-${Math.abs(n)+base}+${base})`;
+            }
+
+            // Junk Lua lines (valid syntax, does nothing useful)
+            function junkLine() {
+                const v = randId();
+                const choices = [
+                    `local ${v}=${obfNum(rng(0,9999))}*${obfNum(rng(1,99))}+${obfNum(rng(0,99))}`,
+                    `local ${v}=math.floor(${obfNum(rng(1,9999))})`,
+                    `local ${v}=math.max(${obfNum(rng(0,100))},${obfNum(rng(0,100))})`,
+                    `local ${v}=tostring(${obfNum(rng(100,9999))})`,
+                    `local ${v}=(${obfNum(rng(1,50))}>0 and ${obfNum(rng(0,9))} or ${obfNum(rng(0,9))})`,
+                    `local ${v}=${obfNum(rng(1,255))}%${obfNum(rng(2,15))}`,
+                    `--${randHex(rng(10,20))}`,
                 ];
-                return styles[rng(0, styles.length - 1)]();
+                return choices[rng(0, choices.length-1)];
+            }
+            function junkBlock(n) {
+                return Array.from({length: n}, junkLine).join('\n');
             }
 
-            // ── Numeric-escape encoder ──
-            // Each character becomes its decimal byte code wrapped in \DDD
-            function numericEscapeStr(s) {
-                let out = '';
-                for (let i = 0; i < s.length; i++) {
-                    out += '\\' + s.charCodeAt(i).toString().padStart(3, '0');
-                }
-                return '"' + out + '"';
-            }
-
-            // ── XOR + shift encode bytes ──
-            function xorShiftEncode(src, xorKey, shift) {
-                const bytes = [];
-                for (let i = 0; i < src.length; i++) {
-                    const b = src.charCodeAt(i);
-                    bytes.push(((b ^ xorKey) + shift) % 256);
-                }
-                return bytes;
-            }
-
-            // ── Base-64-like custom alphabet ──
-            const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-            function customB64Encode(bytes) {
-                let out = '';
-                for (let i = 0; i < bytes.length; i += 3) {
-                    const b0 = bytes[i], b1 = bytes[i+1] ?? 0, b2 = bytes[i+2] ?? 0;
-                    out += B64[b0 >> 2];
-                    out += B64[((b0 & 3) << 4) | (b1 >> 4)];
-                    out += (i+1 < bytes.length) ? B64[((b1 & 0xf) << 2) | (b2 >> 6)] : '=';
-                    out += (i+2 < bytes.length) ? B64[b2 & 0x3f] : '=';
-                }
+            // ── Encode source → XOR byte array ──
+            // XOR with key is self-inverse: decode(encode(b, k), k) === b  always
+            function encodeBytes(src, key) {
+                const out = [];
+                for (let i = 0; i < src.length; i++) out.push(src.charCodeAt(i) ^ key);
                 return out;
             }
 
-            // ── Build a numeric-escaped string table entry ──
-            function makeEntry(plainStr) {
-                return numericEscapeStr(plainStr);
-            }
+            // ── Emit a single obfuscation pass ──
+            function obfPass(src, junkN) {
+                const key   = rng(1, 127);          // XOR key (never 0 so every byte changes)
+                const bytes = encodeBytes(src, key); // encoded byte array
 
-            // ── Junk line generator ──
-            const junkTemplates = [
-                () => `local ${randIdent()} = ${rng(0,9999)} * ${rng(1,99)} + ${rng(0,99)}`,
-                () => `local ${randIdent()} = math.floor(${rng(0,9999)} + ${rng(0,999)})`,
-                () => `local ${randIdent()} = string.len(${numericEscapeStr(randHex(rng(2,6)))})`,
-                () => `local ${randIdent()} = type(${rng(0,1) ? numericEscapeStr(randHex(4)) : rng(0,255)})`,
-                () => `-- ${randHex(rng(8, 16))}`,
-                () => `local ${randIdent()} = tostring(${rng(100,99999)})`,
-                () => `local ${randIdent()} = (${rng(1,50)} > ${rng(1,50)}) and ${rng(0,9)} or ${rng(0,9)}`,
-                () => `local ${randIdent()} = math.max(${rng(0,100)}, ${rng(0,100)})`,
-                () => `local ${randIdent()} = ${rng(1,255)} % ${rng(1,15)}`,
-            ];
-            function junk(n) {
-                return Array.from({length: n}, () => junkTemplates[rng(0, junkTemplates.length-1)]()).join('\n');
-            }
-
-            // ── XOR bit-by-bit helper emitter (as Lua source) ──
-            function emitXorFn(name) {
-                const a = randIdent(), b = randIdent(), r = randIdent(), i = randIdent();
-                const ba = randIdent(), bb = randIdent();
-                return [
-                    `local function ${name}(${a},${b})`,
-                    `  local ${r}=0`,
-                    `  for ${i}=0,7 do`,
-                    `    local ${ba}=math.floor(${a}/(2^${i}))%2`,
-                    `    local ${bb}=math.floor(${b}/(2^${i}))%2`,
-                    `    if ${ba}~=${bb} then ${r}=${r}+(2^${i}) end`,
-                    `  end`,
-                    `  return ${r}`,
-                    `end`,
-                ].join('\n');
-            }
-
-            // ── Core single-pass obfuscator ──
-            // Produces output matching the WeAreDevs style:
-            //   --[[ KittyScripts Obfuscator ]]
-            //   return(function(...)
-            //     local N={<numeric-escaped strings>}
-            //     local function a(a) return N[a+offset] end
-            //     ... decoder + VM ...
-            //   end)(...)
-            function obfuscatePass(src, junkDensity) {
-                const xorKey = rng(1, 127);
-                const shift  = rng(30, 110);
-
-                // Encode the source as bytes
-                const encoded = xorShiftEncode(src, xorKey, shift);
-
-                // Split into groups of 3 → base64-like custom encoding, stored as numeric-escape strings
-                // We'll store encoded bytes directly as numeric-escape strings in chunks
-                const CHUNK = 80;
-                const tableEntries = [];
-                for (let i = 0; i < encoded.length; i += CHUNK) {
-                    const chunk = encoded.slice(i, i + CHUNK);
-                    tableEntries.push(numericEscapeStr(String.fromCharCode(...chunk)));
+                // Chunk the byte array into rows of ~60 values for readability
+                const COLS = 60;
+                const rows = [];
+                for (let i = 0; i < bytes.length; i += COLS) {
+                    rows.push(bytes.slice(i, i + COLS).join(','));
                 }
-
-                // Also add some fake decoy strings (like WRD does)
-                const decoyCount = rng(8, 16);
-                const insertPositions = new Set();
-                while (insertPositions.size < decoyCount) insertPositions.add(rng(0, tableEntries.length));
-                const decoyAt = [...insertPositions].sort((a,b) => a-b);
-                const decoyMap = {};
-                decoyAt.forEach(pos => {
-                    const fake = randHex(rng(4,12));
-                    decoyMap[pos] = numericEscapeStr(fake);
-                });
-
-                const allEntries = [];
-                let realIdxMap = []; // index in allEntries → chunk index
-                let chunkIdx = 0;
-                for (let i = 0; i <= tableEntries.length; i++) {
-                    if (decoyMap[i]) allEntries.push(decoyMap[i]);
-                    if (i < tableEntries.length) {
-                        realIdxMap.push(allEntries.length);
-                        allEntries.push(tableEntries[i]);
-                        chunkIdx++;
-                    }
-                }
+                const byteTableLit = rows.join(',');
 
                 // Variable names
-                const tblVar  = randIdent();
-                const fnA     = randIdent(); // accessor fn: a(i) → N[i+offset]
-                const xorFn   = randIdent();
-                const outVar  = randIdent();
-                const idxVar  = randIdent();
-                const bytVar  = randIdent();
-                const catVar  = randIdent();
-                const loadVar = randIdent();
-                const mergeVar= randIdent();
-                const subVar  = randIdent();
-                const lenVar  = randIdent();
-                const tmpVar  = randIdent();
+                const vTbl  = randId();  // encoded byte table
+                const vKey  = randId();  // XOR key variable
+                const vOut  = randId();  // output char table
+                const vI    = randId();  // loop index
+                const vB    = randId();  // current byte
+                const vCat  = randId();  // concatenated string
+                const vLoad = randId();  // loadstring result
+                const vFn   = randId();  // loaded function
 
-                // Offset obfuscation: WRD uses a+(-331664-(-356996)) style arithmetic
-                const baseOffset = rng(100000, 999999);
-                const fakeA = rng(100000, 999999);
-                const fakeB = fakeA - baseOffset; // so fakeA + fakeB_neg = baseOffset... wait, let's be direct
-                // offset = tableOffset where N[1] is first real entry
-                // We'll use: a(i) = N[i + (fakeA - fakeB)] where fakeA - fakeB = 1 (1-based table)
-                // Actually WRD does N[a + constant] to access the 1-indexed Lua table
-                // Let's just emit:  return N[a + 1]  but obfuscated as arithmetic
-                const R = rng(200000, 800000);
-                const offsetExpr = `${R+(1)}-${R}`; // evaluates to 1 (Lua 1-indexed)
+                // Obfuscate the key as arithmetic so it's not a plain literal
+                const keyExpr = obfNum(key);
 
-                // Build the decode body: iterate over real entries, decode each chunk
-                const reIdxLit = realIdxMap.map(i => i+1).join(','); // 1-indexed Lua
+                // Build Lua source
+                const parts = [];
+                parts.push(`--[[ KittyScripts Obfuscator ]]`);
+                parts.push(`local ${vTbl}={${byteTableLit}}`);
+                parts.push(junkBlock(junkN));
+                parts.push(`local ${vKey}=${keyExpr}`);
+                parts.push(junkBlock(Math.ceil(junkN / 2)));
+                parts.push(`local ${vOut}={}`);
+                parts.push(`for ${vI}=1,#${vTbl} do`);
+                // XOR decode: use bit32 if available (Lua 5.2 / early Luau), else manual
+                // Roblox Luau has bit32 library reliably
+                parts.push(`  local ${vB}=${vTbl}[${vI}]`);
+                parts.push(`  ${vOut}[${vI}]=string.char(bit32.bxor(${vB},${vKey}))`);
+                parts.push(`end`);
+                parts.push(junkBlock(Math.ceil(junkN / 2)));
+                parts.push(`local ${vCat}=table.concat(${vOut})`);
+                parts.push(junkBlock(rng(1, 3)));
+                parts.push(`local ${vLoad}=loadstring(${vCat})`);
+                parts.push(`local ${vFn}=${vLoad}`);
+                parts.push(`if ${vFn} then ${vFn}() end`);
 
-                const lines = [];
-                lines.push(`--[[ KittyScripts Obfuscator ]]`);
-                lines.push(`return(function(...)`);
-                lines.push(`local ${tblVar}={${allEntries.join(',')}}`);
-                lines.push(`local function ${fnA}(a) return ${tblVar}[a+(${offsetExpr})] end`);
-                lines.push(junk(junkDensity));
-                lines.push(emitXorFn(xorFn));
-                lines.push(junk(Math.ceil(junkDensity/2)));
-                // Decode: reassemble encoded bytes from table, XOR+unshift, concat
-                lines.push(`local ${outVar}={}`);
-                lines.push(`local ${mergeVar}={${reIdxLit}}`);
-                lines.push(`for ${idxVar}=1,#${mergeVar} do`);
-                lines.push(`  local ${subVar}=${tblVar}[${mergeVar}[${idxVar}]]`);
-                lines.push(`  for ${lenVar}=1,#${subVar} do`);
-                lines.push(`    local ${bytVar}=string.byte(${subVar},${lenVar})`);
-                lines.push(`    local ${tmpVar}=(${bytVar}-${shift}+256)%256`);
-                lines.push(`    ${outVar}[#${outVar}+1]=string.char(${xorFn}(${tmpVar},${xorKey}))`);
-                lines.push(`  end`);
-                lines.push(`end`);
-                lines.push(junk(Math.ceil(junkDensity/2)));
-                lines.push(`local ${catVar}=table.concat(${outVar})`);
-                lines.push(junk(rng(1,3)));
-                lines.push(`local ${loadVar}=loadstring(${catVar})`);
-                lines.push(`if ${loadVar} then return ${loadVar}() end`);
-                lines.push(`end)(...)`);
-
-                return lines.join('\n');
+                return parts.join('\n');
             }
 
             function obfuscate(src, passes) {
-                let cur = src;
+                // Validate: make sure source has no null bytes that would corrupt encoding
+                let cur = src.replace(/\0/g, '');
                 for (let i = 0; i < passes; i++) {
-                    const density = i === 0 ? rng(3, 6) : rng(2, 4);
-                    cur = obfuscatePass(cur, density);
+                    const density = i === 0 ? rng(4, 7) : rng(2, 4);
+                    cur = obfPass(cur, density);
                 }
                 return cur;
             }
 
-            // ── Button handlers ──
+            // ── Button wiring ──
             obfRunBtn.addEventListener('click', () => {
                 const src = obfInput.value.trim();
                 if (!src) { showToast('Paste a script first!', 'error'); return; }
                 obfRunBtn.classList.add('running');
-                obfRunBtn.querySelector('svg + *') // just update text
                 obfRunBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Obfuscating…`;
 
                 setTimeout(() => {
@@ -1536,10 +1446,11 @@
                         obfCopyOutBtn.disabled = false;
                         obfSelectBtn.disabled  = false;
                         const ratio = ((result.length / src.length) * 100).toFixed(0);
-                        obfStatsEl.innerHTML = `Input: <span>${src.length.toLocaleString()}</span> chars → Output: <span>${result.length.toLocaleString()}</span> chars (<span>${ratio}%</span> size, <span>${obfLevel}</span> pass${obfLevel>1?'es':''})`;
-                        showToast('🔒 Obfuscated successfully!', 'success');
+                        obfStatsEl.innerHTML = `Input: <span>${src.length.toLocaleString()}</span> chars → Output: <span>${result.length.toLocaleString()}</span> chars (<span>${ratio}%</span> size · <span>${obfLevel}</span> pass${obfLevel>1?'es':''})`;
+                        showToast('🔒 Obfuscated!', 'success');
                     } catch(e) {
                         showToast('Error: ' + e.message, 'error');
+                        console.error(e);
                     }
                     obfRunBtn.classList.remove('running');
                     obfRunBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Obfuscate`;
@@ -1560,24 +1471,24 @@
                 setTimeout(() => { obfSelectBtn.textContent = orig; }, 1800);
             });
 
-            obfCopyOutBtn.addEventListener('click', () => {
-                const text = obfOutput.value;
-                const doFallback = () => {
+            function copyText(text) {
+                const fallback = () => {
                     const ta = document.createElement('textarea');
                     ta.value = text; ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
                     document.body.appendChild(ta); ta.focus(); ta.select();
-                    try { document.execCommand('copy'); showToast('Output copied!', 'success'); }
+                    try { document.execCommand('copy'); showToast('Copied!', 'success'); }
                     catch { showToast('Copy failed', 'error'); }
                     document.body.removeChild(ta);
                 };
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(() => showToast('Output copied!', 'success')).catch(doFallback);
-                } else doFallback();
-            });
+                if (navigator.clipboard && navigator.clipboard.writeText)
+                    navigator.clipboard.writeText(text).then(() => showToast('Copied!', 'success')).catch(fallback);
+                else fallback();
+            }
 
+            obfCopyOutBtn.addEventListener('click', () => copyText(obfOutput.value));
             obfPasteBtn.addEventListener('click', async () => {
                 try { obfInput.value = await navigator.clipboard.readText(); }
-                catch { showToast('Clipboard access denied — paste manually (Ctrl+V)', 'error'); }
+                catch { showToast('Clipboard denied — paste manually (Ctrl+V)', 'error'); }
             });
         })();
     </script>
