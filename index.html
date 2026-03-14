@@ -833,7 +833,7 @@
             <div class="obf-header">
                 <div>
                     <h2>Lua Obfuscator</h2>
-                    <p class="obf-subtitle">--[[ KittyScripts Obfuscator ]] — key-schedule XOR, opaque predicates, dead code, dynamic loadstring</p>
+                    <p class="obf-subtitle">--[[ KittyScripts Obfuscator ]] — XOR + shift encoding, split tables, junk injection</p>
                 </div>
                 <div class="obf-level-wrap">
                     <span class="obf-level-label">Layers</span>
@@ -878,6 +878,9 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Feature info cards removed -->
+
         </div>
     </section>
 
@@ -1215,7 +1218,7 @@
         refreshBtn.addEventListener('click', fetchScripts);
 
         // ════════════════════════════════════════════════════════════
-        // ── KITTYSCRIPTS OBFUSCATOR ENGINE v2 ───────────────────────
+        // ── IMPROVED OBFUSCATOR ENGINE ──────────────────────────────
         // ════════════════════════════════════════════════════════════
         (function () {
             const input     = document.getElementById('obfInput');
@@ -1236,93 +1239,34 @@
                 });
             });
 
-            // ── Utilities ──────────────────────────────────────────
             function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
             function randHex(len)   { let s=''; for (let i=0;i<len;i++) s+='0123456789abcdef'[rand(0,15)]; return s; }
-            function pick(arr)      { return arr[rand(0, arr.length - 1)]; }
-            function shuffle(arr)   { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];} return a; }
 
-            // ── Identifier generation ──────────────────────────────
-            const CONFUSE = 'lI1lIl1IlI1lI1Il'.split('');
-            const PREFIXES = ['_0x','_L','_R','__','_x','lI','Il','l1','_lI','I1l'];
-            const FAKE_NAMES = [
-                'decryptAES','validateKey','initCipher','processBlock','computeHash',
-                'encodeBase64','streamXor','keySchedule','roundFunction','mixColumns',
-                'shiftRows','subBytes','addRoundKey','expandKey','deriveKey',
-                'verifyChecksum','applyPermutation','feistelRound','sBoxLookup','pBoxApply',
-                'invertMatrix','modularExp','primeCheck','eulerTotient','millerRabin',
-            ];
-            let _fakeNameIdx = 0;
-            function randIdent(style) {
-                style = style || pick(['hex','confuse','confuse','hex']);
-                const p = pick(PREFIXES);
-                if (style === 'hex') {
-                    return p + randHex(rand(6,12));
-                } else {
-                    return p + shuffle(CONFUSE).join('').slice(0, rand(8,14));
-                }
-            }
-            function nextFakeName() {
-                return FAKE_NAMES[(_fakeNameIdx++) % FAKE_NAMES.length];
+            const PREFIXES = ['_0x','_L','_R','__','_x','lI','Il','l1'];
+            const CONFUSE   = 'lI1lIl1IlI1lI1Il'.split('');
+            function randIdent() {
+                const p = PREFIXES[rand(0, PREFIXES.length - 1)];
+                const useHex = rand(0, 1);
+                const body = useHex
+                    ? randHex(rand(6, 12))
+                    : [...CONFUSE].sort(() => Math.random() - 0.5).join('').slice(0, rand(8, 14));
+                return p + body;
             }
 
-            // ── Opaque predicate expressions ───────────────────────
-            function opaqueInt(n) {
-                // Always safe: plain literal fallback
-                if (typeof n !== 'number' || !isFinite(n) || n < 0) return `(${n|0})`;
-                const strategies = [
-                    // a*b - c  (always exact integers)
-                    () => { const a=rand(2,12),b=rand(2,12); const c=a*b-n; return `(${a}*${b}-${c})`; },
-                    // loop accumulator — only use when reps >= 1 so the loop is valid
-                    () => {
-                        if (n === 0) return `(0)`;
-                        const step=rand(1,6); const reps=Math.floor(n/step); const rem=n-(step*reps);
-                        if (reps < 1) return `(${n})`;
-                        return `(function() local _r=${rem};for _i=1,${reps} do _r=_r+${step} end;return _r end)()`;
-                    },
-                    // string.len — pad must be >= 1 so length > 0, and total must be > 0
-                    () => {
-                        const pad=rand(1,8); const total=n+pad;
-                        if (total < 1) return `(${n})`;
-                        const s=randHex(total); return `(string.len("${s}")-${pad})`;
-                    },
-                    // math.floor of float
-                    () => { const frac=(rand(1,99)/100); return `math.floor(${(n+frac).toFixed(4)})`; },
+            function junkLine() {
+                const flavors = [
+                    () => `local ${randIdent()} = ${rand(0,9999)} * ${rand(1,99)} + ${rand(0,99)}`,
+                    () => `local ${randIdent()} = math.floor(${rand(1,999)} + ${rand(0,99)})`,
+                    () => `local ${randIdent()} = string.len("${randHex(rand(3,8))}")`,
+                    () => `local ${randIdent()} = type(${rand(0,1) ? '"'+randHex(4)+'"' : rand(0,255)})`,
+                    () => `-- ${randHex(rand(6,14))}`,
+                    () => `local ${randIdent()} = tostring(${rand(100,9999)})`,
+                    () => `local ${randIdent()} = (${rand(1,50)} > ${rand(1,50)}) and ${rand(0,9)} or ${rand(0,9)}`,
                 ];
-                try { return pick(strategies)(); } catch(e) { return `(${n})`; }
+                return flavors[rand(0, flavors.length - 1)]();
             }
+            function addJunk(n) { return Array.from({ length: n }, junkLine); }
 
-            // ── Junk line generator ────────────────────────────────
-            function junkLine(realistic) {
-                if (realistic) {
-                    const fn = nextFakeName();
-                    const a=randIdent(), b=randIdent(), c=randIdent(), i=randIdent();
-                    const flavors = [
-                        `local function ${fn}(${a},${b}) local ${c}=0;for ${i}=1,#${a} do ${c}=${c}+${a}:byte(${i}) end;return ${c} end`,
-                        `local function ${fn}(${a}) return ${a}:gsub(".",function(${b}) return string.char(${b}:byte(1)^${rand(1,127)}) end) end`,
-                        `local function ${fn}(${a},${b}) local ${c}={};for ${i}=1,#${a} do ${c}[${i}]=string.char(${a}:byte(${i})+${b}) end;return table.concat(${c}) end`,
-                        `local ${fn}={${Array.from({length:rand(4,8)},()=>rand(0,255)).join(',')}}`,
-                    ];
-                    return pick(flavors);
-                } else {
-                    const flavors = [
-                        () => `local ${randIdent()} = ${rand(0,9999)} * ${rand(1,99)} + ${rand(0,99)}`,
-                        () => `local ${randIdent()} = math.floor(${rand(1,999)} + ${rand(0,99)})`,
-                        () => `local ${randIdent()} = string.len("${randHex(rand(3,8))}")`,
-                        () => `local ${randIdent()} = type(${rand(0,1) ? '"'+randHex(4)+'"' : rand(0,255)})`,
-                        () => `-- ${randHex(rand(6,14))}`,
-                        () => `-- c${randHex(7)}`,
-                        () => `local ${randIdent()} = tostring(${rand(100,9999)})`,
-                        () => `local ${randIdent()} = (${rand(1,50)} > ${rand(1,50)}) and ${rand(0,9)} or ${rand(0,9)}`,
-                    ];
-                    return pick(flavors)();
-                }
-            }
-            function addJunk(n, realistic) {
-                return Array.from({ length: n }, () => junkLine(realistic && rand(0,1)===1));
-            }
-
-            // ── XOR helper emitter ─────────────────────────────────
             function emitXorHelper(fnName) {
                 const a=randIdent(), b=randIdent(), r=randIdent(), i=randIdent(), ba=randIdent(), bb=randIdent();
                 return [
@@ -1334,159 +1278,92 @@
                     `    if ${ba}~=${bb} then ${r}=${r}+(2^${i}) end`,
                     `  end`,
                     `  return ${r}`,
-                    `end`,
+                `end`,
                 ];
             }
 
-            // ── Key schedule encoding ──────────────────────────────
-            // Each byte gets a different XOR key derived from its index
-            function keyScheduleVal(i, baseKey, mult, divG) {
-                return (baseKey + i * mult + Math.floor(i / divG) * 3) % 128;
+            function encodeBytes(utf8Bytes, shift, xorKey) {
+                return utf8Bytes.map(b => ((b ^ xorKey) + shift) % 256);
             }
 
-            function encodeBytes(utf8Bytes, shift, baseKey, mult, divG) {
-                return utf8Bytes.map((b, i) => {
-                    const k = keyScheduleVal(i, baseKey, mult, divG);
-                    return ((b ^ k) + shift) % 256;
-                });
-            }
-
-            // Emit Lua decode loop using the key schedule
-            function emitKeyScheduleDecode(xorFn, merged, outVar, shift, baseKey, mult, divG) {
-                const idxVar = randIdent(), valVar = randIdent(), byteVar = randIdent(), keyVar = randIdent(), iVar = randIdent();
-                const oShift = opaqueInt(shift);
-                const oBase  = opaqueInt(baseKey);
-                const oMult  = opaqueInt(mult);
-                // divG is used as a divisor — must be a plain integer to avoid float division issues
-                // Wrap in math.floor() to be safe regardless of which opaque strategy was chosen
-                const oDivG  = `math.floor(${opaqueInt(divG)})`;
-                return [
-                    `local ${outVar}={}`,
-                    `for ${idxVar},${valVar} in ipairs(${merged}) do`,
-                    `  local ${iVar}=${idxVar}-1`,
-                    `  local ${keyVar}=(${oBase}+${iVar}*${oMult}+math.floor(${iVar}/${oDivG})*3)%128`,
-                    `  local ${byteVar}=(${valVar}-${oShift}+256)%256`,
-                    `  ${outVar}[${idxVar}]=string.char(${xorFn}(${byteVar},${keyVar}))`,
-                    `end`,
-                ];
-            }
-
-            // ── Dynamic loadstring reconstruction ─────────────────
-            // Never writes "loadstring" as a literal string.
-            // Uses getfenv(0) fallback so it works in both Lua 5.1 (Roblox) and 5.2+
-            function emitDynamicLoadstring(loadVar, execVar) {
-                const lsBytes = [108,111,97,100,115,116,114,105,110,103]; // "loadstring"
-                const lsKey = rand(1, 63);
-                const encoded = lsBytes.map(b => b ^ lsKey);
-                const tblVar = randIdent(), iVar = randIdent(), vVar = randIdent(), strVar = randIdent();
-                const envVar = randIdent();
-                return [
-                    `local ${tblVar}={${encoded.join(',')}}`,
-                    `local ${strVar}=""`,
-                    `for ${iVar},${vVar} in ipairs(${tblVar}) do ${strVar}=${strVar}..string.char(${vVar}^${lsKey}) end`,
-                    `local ${envVar}=(type(_ENV)=="table" and _ENV) or (getfenv and getfenv(0)) or {}`,
-                    `local ${loadVar}=${envVar}[${strVar}]`,
-                    `local ${execVar}=${loadVar}`,
-                ];
-            }
-
-            // ── Split table emitter with decoys ────────────────────
             function emitSplitTables(encoded) {
-                const numParts  = rand(3, 7);
-                const partSize  = Math.ceil(encoded.length / numParts);
-                const realNames = Array.from({ length: numParts }, () => randIdent());
-                const lines     = [];
+                const numParts = rand(3, 6);
+                const partSize = Math.ceil(encoded.length / numParts);
+                const names    = Array.from({ length: numParts }, randIdent);
+                const lines    = [];
 
-                // Emit chunk declarations in a shuffled visual order
-                // (just cosmetic — the merge order below must stay sequential)
-                const declOrder = shuffle([...Array(numParts).keys()]);
-                for (const i of declOrder) {
+                for (let i = 0; i < numParts; i++) {
                     const chunk = encoded.slice(i * partSize, (i + 1) * partSize);
                     const rows  = [];
                     for (let j = 0; j < chunk.length; j += 80) {
                         rows.push(chunk.slice(j, j + 80).join(','));
                     }
-                    lines.push(`local ${realNames[i]}={${rows.join(',')}}`);
+                    lines.push(`local ${names[i]}={${rows.join(',')}}`);
                 }
 
-                // Inject decoy tables that look real but are never merged in
-                const numDecoys = rand(1, 2);
-                for (let d = 0; d < numDecoys; d++) {
-                    const decoyName = randIdent();
-                    const decoyLen  = rand(8, 24);
-                    const decoyVals = Array.from({ length: decoyLen }, () => rand(0, 255));
-                    lines.push(`local ${decoyName}={${decoyVals.join(',')}}`);
-                    const v = randIdent();
-                    lines.push(`local ${v}=#${decoyName}`);
-                }
-
-                // IMPORTANT: merge in sequential order (0,1,2,...) so byte positions
-                // match what was encoded. The key schedule is position-dependent,
-                // so order must be preserved exactly.
                 const merged = randIdent();
                 lines.push(`local ${merged}={}`);
-                for (let idx = 0; idx < numParts; idx++) {
-                    const iVar = randIdent(), vVar = randIdent();
-                    lines.push(`for ${iVar},${vVar} in ipairs(${realNames[idx]}) do ${merged}[#${merged}+1]=${vVar} end`);
-                }
+                names.forEach(name => {
+                    const idx = randIdent(), val = randIdent();
+                    lines.push(`for ${idx},${val} in ipairs(${name}) do ${merged}[#${merged}+1]=${val} end`);
+                });
 
                 return { lines, merged };
             }
 
-            // ── Single layer builder ───────────────────────────────
-            function buildLayer(src, junkDensity, isInnermost) {
-                const enc     = new TextEncoder();
-                const utf8    = Array.from(enc.encode(src));
-
-                const shift   = rand(30, 110);
-                const baseKey = rand(1, 100);
-                const mult    = rand(3, 15);
-                const divG    = rand(8, 24);
-
-                const encoded = encodeBytes(utf8, shift, baseKey, mult, divG);
+            function buildLayer(src, junkDensity) {
+                const enc    = new TextEncoder();
+                const utf8   = Array.from(enc.encode(src));
+                const shift  = rand(30, 110);
+                const xorKey = rand(1, 127);
+                const encoded = encodeBytes(utf8, shift, xorKey);
 
                 const xorFn   = randIdent();
                 const outVar  = randIdent();
+                const idxVar  = randIdent();
+                const valVar  = randIdent();
+                const byteVar = randIdent();
                 const catVar  = randIdent();
                 const loadVar = randIdent();
-                const execVar = randIdent();
 
                 const { lines: tableLines, merged } = emitSplitTables(encoded);
-                const xorLines    = emitXorHelper(xorFn);
-                const decodeLines = emitKeyScheduleDecode(xorFn, merged, outVar, shift, baseKey, mult, divG);
-                const loadLines   = emitDynamicLoadstring(loadVar, execVar);
+                const xorLines = emitXorHelper(xorFn);
+
+                const decodeLines = [
+                    `local ${outVar}={}`,
+                    `for ${idxVar},${valVar} in ipairs(${merged}) do`,
+                    `  local ${byteVar}=(${valVar}-${shift}+256)%256`,
+                    `  ${outVar}[${idxVar}]=string.char(${xorFn}(${byteVar},${xorKey}))`,
+                    `end`,
+                ];
 
                 const allLines = [
                     `--[[ KittyScripts Obfuscator ]]`,
-                    `-- c${randHex(7)}`,
-                    ...addJunk(junkDensity, isInnermost),
+                    ...addJunk(junkDensity),
                     ...xorLines,
-                    ...addJunk(junkDensity, isInnermost),
+                    ...addJunk(junkDensity),
                     ...tableLines,
-                    ...addJunk(junkDensity, false),
+                    ...addJunk(junkDensity),
                     ...decodeLines,
-                    ...addJunk(Math.ceil(junkDensity / 2), false),
+                    ...addJunk(Math.ceil(junkDensity / 2)),
                     `local ${catVar}=table.concat(${outVar})`,
-                    ...addJunk(Math.ceil(junkDensity / 2), false),
-                    ...loadLines,
-                    `if ${execVar} then ${execVar}() end`,
+                    ...addJunk(Math.ceil(junkDensity / 2)),
+                    `local ${loadVar}=loadstring(${catVar})`,
+                    `if ${loadVar} then ${loadVar}() end`,
                 ];
 
                 return allLines.join('\n');
             }
 
-            // ── Multi-layer orchestrator ───────────────────────────
             function obfuscate(src, levels) {
                 let current = src;
                 for (let i = 0; i < levels; i++) {
-                    const junk    = i === 0 ? rand(3, 6) : rand(1, 3);
-                    const isInner = (i < levels - 1);
-                    current = buildLayer(current, junk, isInner);
+                    const junk = i === 0 ? rand(2, 5) : rand(1, 3);
+                    current = buildLayer(current, junk);
                 }
                 return current;
             }
 
-            // ── UI wiring ──────────────────────────────────────────
             runBtn.addEventListener('click', () => {
                 const src = input.value.trim();
                 if (!src) { showToast('Paste a script first!', 'error'); return; }
