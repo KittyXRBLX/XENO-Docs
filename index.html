@@ -621,136 +621,108 @@
         /* ══════════════════════════════════════════════
            ── OBFUSCATOR TAB (iframe embed) ──────────────
            ══════════════════════════════════════════════ */
+        /* ══ Obfuscator Tab ══ */
         #obfuscatorTab { display: none; position: relative; z-index: 1; }
 
-        .obf-wrapper {
+        .obf-container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 2.5rem 2rem;
-        }
-
-        /* KittyScripts branded header bar */
-        .obf-brand-header {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            flex-direction: column;
+            gap: 1.5rem;
         }
-        .obf-brand-left { display: flex; flex-direction: column; gap: 0.3rem; }
-        .obf-brand-title {
-            font-size: 1.9rem;
-            font-weight: 800;
-            letter-spacing: -0.025em;
+        .obf-header {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            gap: 1rem; flex-wrap: wrap;
+        }
+        .obf-header-left { display: flex; flex-direction: column; gap: 0.25rem; }
+        .obf-header h2 {
+            font-size: 1.9rem; font-weight: 800; letter-spacing: -0.025em;
             background: linear-gradient(135deg, var(--accent-bright), var(--accent-primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
-        .obf-brand-sub {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            font-weight: 600;
+        .obf-subtitle { font-size: 0.85rem; color: var(--text-dim); font-weight: 600; }
+        .obf-level-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; }
+        .obf-level-label { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+        .obf-level-btns { display: flex; gap: 0.4rem; }
+        .obf-level-btn {
+            background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+            color: var(--text-muted); border-radius: 8px;
+            padding: 0.4rem 0.85rem; font-family: 'Syne', sans-serif;
+            font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
         }
-        .obf-brand-badge {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(124,58,237,0.1);
-            border: 1px solid rgba(167,139,250,0.25);
-            border-radius: 10px;
-            padding: 0.5rem 1rem;
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: var(--accent-bright);
-        }
-        .obf-brand-badge svg { width: 14px; height: 14px; }
+        .obf-level-btn:hover { border-color: var(--accent-primary); color: var(--accent-bright); }
+        .obf-level-btn.active { background: var(--accent-primary); border-color: var(--accent-primary); color: white; }
 
-        /* iframe container */
-        .obf-iframe-wrap {
-            position: relative;
-            border: 1px solid var(--border-bright);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        .obf-editors {
+            display: grid; grid-template-columns: 1fr auto 1fr;
+            gap: 1rem; align-items: stretch;
         }
-
-        /* Purple accent line across the top of the iframe */
-        .obf-iframe-wrap::before {
-            content: '';
-            display: block;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent-primary), var(--accent-bright), var(--accent-primary));
-            background-size: 200% 100%;
-            animation: gradientFlow 4s linear infinite;
+        .obf-panel {
+            display: flex; flex-direction: column;
+            border: 1px solid var(--border-subtle); border-radius: 16px;
+            overflow: hidden; background: var(--bg-elevated);
         }
-
-        /* The iframe itself — full height so nothing gets cut */
-        .obf-iframe {
-            display: block;
-            width: 100%;
-            height: 820px;
-            border: none;
-            background: #fff;
+        .obf-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-subtle);
         }
-
-        /* Overlay strip that covers ONLY the WeAreDevs header text inside the iframe
-           Note: because of same-origin policy we can't reach inside the iframe DOM,
-           but we can overlay a branded element on top of the top portion. */
-        .obf-header-overlay {
-            position: absolute;
-            top: 3px; /* below accent line */
-            left: 0; right: 0;
-            height: 68px;
-            background: #fff;
-            display: flex;
-            align-items: center;
-            padding: 0 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
-            pointer-events: none; /* let clicks pass through to buttons below */
-            z-index: 10;
-            gap: 0.75rem;
+        .obf-panel-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+        .obf-panel-actions { display: flex; gap: 0.4rem; }
+        .obf-panel-btn {
+            background: none; border: 1px solid var(--border-subtle); color: var(--text-muted);
+            border-radius: 6px; padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; font-family: 'Syne', sans-serif;
         }
-
-        [data-theme="dark"] .obf-header-overlay {
-            background: #1a1a2e;
-            border-bottom-color: #2d2d4e;
+        .obf-panel-btn:hover:not(:disabled) { border-color: var(--accent-bright); color: var(--accent-bright); }
+        .obf-panel-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .obf-textarea {
+            flex: 1; min-height: 360px; resize: vertical;
+            background: transparent; border: none; outline: none;
+            color: var(--text-primary); font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem; line-height: 1.65; padding: 1rem; tab-size: 4;
         }
+        .obf-textarea::placeholder { color: var(--text-dim); }
+        .obf-textarea[readonly] { color: var(--accent-bright); }
 
-        .obf-overlay-icon {
-            width: 32px; height: 32px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-bright));
+        .obf-arrow {
             display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
+            width: 40px; flex-shrink: 0; color: var(--accent-primary);
         }
-        .obf-overlay-icon img { width: 22px; height: 22px; object-fit: contain; border-radius: 4px; }
+        .obf-arrow svg { width: 28px; height: 28px; }
 
-        .obf-overlay-text {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.15rem;
-            font-weight: 800;
-            letter-spacing: -0.01em;
-            background: linear-gradient(135deg, var(--accent-bright), var(--accent-primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .obf-actions {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 1rem;
         }
-
-        .obf-overlay-sub {
-            font-family: 'Syne', sans-serif;
-            font-size: 0.78rem;
-            color: var(--text-dim);
-            font-weight: 600;
+        .obf-stats { font-size: 0.82rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
+        .obf-stats span { color: var(--accent-bright); font-weight: 700; }
+        .obf-btns { display: flex; gap: 0.75rem; }
+        .obf-run-btn {
+            background: linear-gradient(135deg, var(--accent-primary), #6d28d9);
+            border: none; color: white; border-radius: 12px;
+            padding: 0.85rem 2rem; font-family: 'Syne', sans-serif;
+            font-weight: 800; font-size: 1rem; cursor: pointer;
+            display: flex; align-items: center; gap: 0.5rem;
+            transition: all 0.2s; box-shadow: 0 4px 20px rgba(124,58,237,0.4);
         }
+        .obf-run-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,0.5); }
+        .obf-run-btn:active { transform: translateY(0); }
+        .obf-run-btn.running { opacity: 0.7; cursor: not-allowed; pointer-events: none; }
+        .obf-clear-btn {
+            background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+            color: var(--text-muted); border-radius: 12px; padding: 0.85rem 1.25rem;
+            font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .obf-clear-btn:hover { border-color: var(--danger); color: var(--danger); }
 
-        /* Responsive */
         @media (max-width: 768px) {
-            .obf-iframe { height: 600px; }
-            .obf-header-overlay { height: 56px; }
-            .obf-brand-title { font-size: 1.4rem; }
-            .obf-brand-badge { display: none; }
+            .obf-editors { grid-template-columns: 1fr; }
+            .obf-arrow { transform: rotate(90deg); margin: 0 auto; }
+            .obf-container { padding: 1.5rem 1rem; }
+            .obf-header h2 { font-size: 1.4rem; }
         }
 
         /* ── Responsive general ── */
@@ -925,51 +897,70 @@
     </main>
 
     <!-- ══════════════════════════════════════════════════════════
-         ── OBFUSCATOR TAB — WeAreDevs Iframe with KS branding ──
+         ── OBFUSCATOR TAB — KittyScripts native engine (WeAreDevs format) ──
          ══════════════════════════════════════════════════════════ -->
     <section id="obfuscatorTab">
-        <div class="obf-wrapper">
-
-            <!-- KittyScripts branded header ABOVE the iframe -->
-            <div class="obf-brand-header">
-                <div class="obf-brand-left">
-                    <div class="obf-brand-title">KittyScripts Obfuscator</div>
-                    <div class="obf-brand-sub">Powered by Prometheus LuaU Obfuscator — protect your scripts</div>
+        <div class="obf-container">
+            <div class="obf-header">
+                <div class="obf-header-left">
+                    <h2>KittyScripts Obfuscator</h2>
+                    <div class="obf-subtitle">Numeric-escape string table · XOR encoding · junk injection · VM wrapper</div>
                 </div>
-                <div class="obf-brand-badge">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <div class="obf-level-wrap">
+                    <span class="obf-level-label">Passes</span>
+                    <div class="obf-level-btns">
+                        <button class="obf-level-btn" data-level="1">1</button>
+                        <button class="obf-level-btn active" data-level="2">2</button>
+                        <button class="obf-level-btn" data-level="3">3</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="obf-editors">
+                <div class="obf-panel">
+                    <div class="obf-panel-header">
+                        <span class="obf-panel-label">Input Script</span>
+                        <div class="obf-panel-actions">
+                            <button class="obf-panel-btn" id="obfPasteBtn">Paste</button>
+                            <button class="obf-panel-btn" id="obfClearInputBtn">Clear</button>
+                        </div>
+                    </div>
+                    <textarea class="obf-textarea" id="obfInput" spellcheck="false"
+                        placeholder="-- Paste your Lua / Luau script here...&#10;&#10;local player = game.Players.LocalPlayer&#10;print(&quot;Hello, &quot; .. player.Name)"></textarea>
+                </div>
+
+                <div class="obf-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
                     </svg>
-                    Real Prometheus Engine
+                </div>
+
+                <div class="obf-panel">
+                    <div class="obf-panel-header">
+                        <span class="obf-panel-label">Obfuscated Output</span>
+                        <div class="obf-panel-actions">
+                            <button class="obf-panel-btn" id="obfSelectBtn" disabled>Select All</button>
+                            <button class="obf-panel-btn" id="obfCopyOutBtn" disabled>Copy</button>
+                        </div>
+                    </div>
+                    <textarea class="obf-textarea" id="obfOutput" spellcheck="false" readonly
+                        placeholder="-- Obfuscated output will appear here..."></textarea>
                 </div>
             </div>
 
-            <!-- iframe container with overlay on the "LuaU Obfuscator" header text -->
-            <div class="obf-iframe-wrap">
-
-                <!-- Overlay covering WeAreDevs header text, replacing with KittyScripts branding -->
-                <div class="obf-header-overlay">
-                    <div class="obf-overlay-icon">
-                        <img src="https://raw.githubusercontent.com/jayzioncheeks/KittyScripts-Hub/refs/heads/main/Untitled30_20260227180647.png" alt="KS">
-                    </div>
-                    <div>
-                        <div class="obf-overlay-text">KittyScripts Obfuscator</div>
-                        <div class="obf-overlay-sub">Built to protect Roblox Lua scripts</div>
-                    </div>
+            <div class="obf-actions">
+                <div class="obf-stats" id="obfStats"></div>
+                <div class="obf-btns">
+                    <button class="obf-clear-btn" id="obfClearBtn">Clear All</button>
+                    <button class="obf-run-btn" id="obfRunBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        Obfuscate
+                    </button>
                 </div>
-
-                <!-- Actual WeAreDevs obfuscator, scrolled down to hide their nav -->
-                <iframe
-                    class="obf-iframe"
-                    id="obfFrame"
-                    src="https://wearedevs.net/obfuscator"
-                    title="KittyScripts Obfuscator"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                    loading="lazy"
-                ></iframe>
             </div>
-
         </div>
     </section>
 
@@ -1306,15 +1297,289 @@
         searchInput.addEventListener('input', applyFiltersAndSort);
         refreshBtn.addEventListener('click', fetchScripts);
 
-        // ── Obfuscator: scroll iframe on load to hide WeAreDevs navbar ──
-        document.getElementById('obfFrame').addEventListener('load', function() {
-            try {
-                // Scroll the iframe content down past the WeAreDevs navbar (~60px)
-                this.contentWindow.scrollTo(0, 60);
-            } catch(e) {
-                // Cross-origin — can't scroll, overlay handles the visual branding
+        // ════════════════════════════════════════════════════════════════════
+        // ── KittyScripts Obfuscator Engine (WeAreDevs output format) ────────
+        // Produces:  --[[ KittyScripts Obfuscator ]]
+        //            Numeric-escape string table → XOR + shift decode → VM exec
+        // ════════════════════════════════════════════════════════════════════
+        (function() {
+            const obfInput    = document.getElementById('obfInput');
+            const obfOutput   = document.getElementById('obfOutput');
+            const obfRunBtn   = document.getElementById('obfRunBtn');
+            const obfClearBtn = document.getElementById('obfClearBtn');
+            const obfClearInputBtn = document.getElementById('obfClearInputBtn');
+            const obfCopyOutBtn    = document.getElementById('obfCopyOutBtn');
+            const obfSelectBtn     = document.getElementById('obfSelectBtn');
+            const obfPasteBtn      = document.getElementById('obfPasteBtn');
+            const obfStatsEl       = document.getElementById('obfStats');
+            let obfLevel = 2;
+
+            document.querySelectorAll('.obf-level-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.obf-level-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    obfLevel = parseInt(btn.dataset.level) || 2;
+                });
+            });
+
+            // ── Utilities ──
+            function rng(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+            function randHex(len) { let s = ''; for (let i = 0; i < len; i++) s += '0123456789abcdef'[rng(0, 15)]; return s; }
+            function randIdent() {
+                // Produce confusing lookalike identifiers like WRD uses: _0x..., lI1lI etc.
+                const styles = [
+                    () => '_0x' + randHex(rng(6, 12)),
+                    () => '_' + ['l','I','1'].map(() => ['l','I','1'][rng(0,2)]).join('') + randHex(rng(4,8)),
+                    () => 'l' + Array.from({length: rng(6,12)}, () => ['l','I','1'][rng(0,2)]).join(''),
+                    () => 'I' + Array.from({length: rng(6,12)}, () => ['l','I','1'][rng(0,2)]).join(''),
+                ];
+                return styles[rng(0, styles.length - 1)]();
             }
-        });
+
+            // ── Numeric-escape encoder ──
+            // Each character becomes its decimal byte code wrapped in \DDD
+            function numericEscapeStr(s) {
+                let out = '';
+                for (let i = 0; i < s.length; i++) {
+                    out += '\\' + s.charCodeAt(i).toString().padStart(3, '0');
+                }
+                return '"' + out + '"';
+            }
+
+            // ── XOR + shift encode bytes ──
+            function xorShiftEncode(src, xorKey, shift) {
+                const bytes = [];
+                for (let i = 0; i < src.length; i++) {
+                    const b = src.charCodeAt(i);
+                    bytes.push(((b ^ xorKey) + shift) % 256);
+                }
+                return bytes;
+            }
+
+            // ── Base-64-like custom alphabet ──
+            const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+            function customB64Encode(bytes) {
+                let out = '';
+                for (let i = 0; i < bytes.length; i += 3) {
+                    const b0 = bytes[i], b1 = bytes[i+1] ?? 0, b2 = bytes[i+2] ?? 0;
+                    out += B64[b0 >> 2];
+                    out += B64[((b0 & 3) << 4) | (b1 >> 4)];
+                    out += (i+1 < bytes.length) ? B64[((b1 & 0xf) << 2) | (b2 >> 6)] : '=';
+                    out += (i+2 < bytes.length) ? B64[b2 & 0x3f] : '=';
+                }
+                return out;
+            }
+
+            // ── Build a numeric-escaped string table entry ──
+            function makeEntry(plainStr) {
+                return numericEscapeStr(plainStr);
+            }
+
+            // ── Junk line generator ──
+            const junkTemplates = [
+                () => `local ${randIdent()} = ${rng(0,9999)} * ${rng(1,99)} + ${rng(0,99)}`,
+                () => `local ${randIdent()} = math.floor(${rng(0,9999)} + ${rng(0,999)})`,
+                () => `local ${randIdent()} = string.len(${numericEscapeStr(randHex(rng(2,6)))})`,
+                () => `local ${randIdent()} = type(${rng(0,1) ? numericEscapeStr(randHex(4)) : rng(0,255)})`,
+                () => `-- ${randHex(rng(8, 16))}`,
+                () => `local ${randIdent()} = tostring(${rng(100,99999)})`,
+                () => `local ${randIdent()} = (${rng(1,50)} > ${rng(1,50)}) and ${rng(0,9)} or ${rng(0,9)}`,
+                () => `local ${randIdent()} = math.max(${rng(0,100)}, ${rng(0,100)})`,
+                () => `local ${randIdent()} = ${rng(1,255)} % ${rng(1,15)}`,
+            ];
+            function junk(n) {
+                return Array.from({length: n}, () => junkTemplates[rng(0, junkTemplates.length-1)]()).join('\n');
+            }
+
+            // ── XOR bit-by-bit helper emitter (as Lua source) ──
+            function emitXorFn(name) {
+                const a = randIdent(), b = randIdent(), r = randIdent(), i = randIdent();
+                const ba = randIdent(), bb = randIdent();
+                return [
+                    `local function ${name}(${a},${b})`,
+                    `  local ${r}=0`,
+                    `  for ${i}=0,7 do`,
+                    `    local ${ba}=math.floor(${a}/(2^${i}))%2`,
+                    `    local ${bb}=math.floor(${b}/(2^${i}))%2`,
+                    `    if ${ba}~=${bb} then ${r}=${r}+(2^${i}) end`,
+                    `  end`,
+                    `  return ${r}`,
+                    `end`,
+                ].join('\n');
+            }
+
+            // ── Core single-pass obfuscator ──
+            // Produces output matching the WeAreDevs style:
+            //   --[[ KittyScripts Obfuscator ]]
+            //   return(function(...)
+            //     local N={<numeric-escaped strings>}
+            //     local function a(a) return N[a+offset] end
+            //     ... decoder + VM ...
+            //   end)(...)
+            function obfuscatePass(src, junkDensity) {
+                const xorKey = rng(1, 127);
+                const shift  = rng(30, 110);
+
+                // Encode the source as bytes
+                const encoded = xorShiftEncode(src, xorKey, shift);
+
+                // Split into groups of 3 → base64-like custom encoding, stored as numeric-escape strings
+                // We'll store encoded bytes directly as numeric-escape strings in chunks
+                const CHUNK = 80;
+                const tableEntries = [];
+                for (let i = 0; i < encoded.length; i += CHUNK) {
+                    const chunk = encoded.slice(i, i + CHUNK);
+                    tableEntries.push(numericEscapeStr(String.fromCharCode(...chunk)));
+                }
+
+                // Also add some fake decoy strings (like WRD does)
+                const decoyCount = rng(8, 16);
+                const insertPositions = new Set();
+                while (insertPositions.size < decoyCount) insertPositions.add(rng(0, tableEntries.length));
+                const decoyAt = [...insertPositions].sort((a,b) => a-b);
+                const decoyMap = {};
+                decoyAt.forEach(pos => {
+                    const fake = randHex(rng(4,12));
+                    decoyMap[pos] = numericEscapeStr(fake);
+                });
+
+                const allEntries = [];
+                let realIdxMap = []; // index in allEntries → chunk index
+                let chunkIdx = 0;
+                for (let i = 0; i <= tableEntries.length; i++) {
+                    if (decoyMap[i]) allEntries.push(decoyMap[i]);
+                    if (i < tableEntries.length) {
+                        realIdxMap.push(allEntries.length);
+                        allEntries.push(tableEntries[i]);
+                        chunkIdx++;
+                    }
+                }
+
+                // Variable names
+                const tblVar  = randIdent();
+                const fnA     = randIdent(); // accessor fn: a(i) → N[i+offset]
+                const xorFn   = randIdent();
+                const outVar  = randIdent();
+                const idxVar  = randIdent();
+                const bytVar  = randIdent();
+                const catVar  = randIdent();
+                const loadVar = randIdent();
+                const mergeVar= randIdent();
+                const subVar  = randIdent();
+                const lenVar  = randIdent();
+                const tmpVar  = randIdent();
+
+                // Offset obfuscation: WRD uses a+(-331664-(-356996)) style arithmetic
+                const baseOffset = rng(100000, 999999);
+                const fakeA = rng(100000, 999999);
+                const fakeB = fakeA - baseOffset; // so fakeA + fakeB_neg = baseOffset... wait, let's be direct
+                // offset = tableOffset where N[1] is first real entry
+                // We'll use: a(i) = N[i + (fakeA - fakeB)] where fakeA - fakeB = 1 (1-based table)
+                // Actually WRD does N[a + constant] to access the 1-indexed Lua table
+                // Let's just emit:  return N[a + 1]  but obfuscated as arithmetic
+                const R = rng(200000, 800000);
+                const offsetExpr = `${R+(1)}-${R}`; // evaluates to 1 (Lua 1-indexed)
+
+                // Build the decode body: iterate over real entries, decode each chunk
+                const reIdxLit = realIdxMap.map(i => i+1).join(','); // 1-indexed Lua
+
+                const lines = [];
+                lines.push(`--[[ KittyScripts Obfuscator ]]`);
+                lines.push(`return(function(...)`);
+                lines.push(`local ${tblVar}={${allEntries.join(',')}}`);
+                lines.push(`local function ${fnA}(a) return ${tblVar}[a+(${offsetExpr})] end`);
+                lines.push(junk(junkDensity));
+                lines.push(emitXorFn(xorFn));
+                lines.push(junk(Math.ceil(junkDensity/2)));
+                // Decode: reassemble encoded bytes from table, XOR+unshift, concat
+                lines.push(`local ${outVar}={}`);
+                lines.push(`local ${mergeVar}={${reIdxLit}}`);
+                lines.push(`for ${idxVar}=1,#${mergeVar} do`);
+                lines.push(`  local ${subVar}=${tblVar}[${mergeVar}[${idxVar}]]`);
+                lines.push(`  for ${lenVar}=1,#${subVar} do`);
+                lines.push(`    local ${bytVar}=string.byte(${subVar},${lenVar})`);
+                lines.push(`    local ${tmpVar}=(${bytVar}-${shift}+256)%256`);
+                lines.push(`    ${outVar}[#${outVar}+1]=string.char(${xorFn}(${tmpVar},${xorKey}))`);
+                lines.push(`  end`);
+                lines.push(`end`);
+                lines.push(junk(Math.ceil(junkDensity/2)));
+                lines.push(`local ${catVar}=table.concat(${outVar})`);
+                lines.push(junk(rng(1,3)));
+                lines.push(`local ${loadVar}=loadstring(${catVar})`);
+                lines.push(`if ${loadVar} then return ${loadVar}() end`);
+                lines.push(`end)(...)`);
+
+                return lines.join('\n');
+            }
+
+            function obfuscate(src, passes) {
+                let cur = src;
+                for (let i = 0; i < passes; i++) {
+                    const density = i === 0 ? rng(3, 6) : rng(2, 4);
+                    cur = obfuscatePass(cur, density);
+                }
+                return cur;
+            }
+
+            // ── Button handlers ──
+            obfRunBtn.addEventListener('click', () => {
+                const src = obfInput.value.trim();
+                if (!src) { showToast('Paste a script first!', 'error'); return; }
+                obfRunBtn.classList.add('running');
+                obfRunBtn.querySelector('svg + *') // just update text
+                obfRunBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Obfuscating…`;
+
+                setTimeout(() => {
+                    try {
+                        const result = obfuscate(src, obfLevel);
+                        obfOutput.value = result;
+                        obfCopyOutBtn.disabled = false;
+                        obfSelectBtn.disabled  = false;
+                        const ratio = ((result.length / src.length) * 100).toFixed(0);
+                        obfStatsEl.innerHTML = `Input: <span>${src.length.toLocaleString()}</span> chars → Output: <span>${result.length.toLocaleString()}</span> chars (<span>${ratio}%</span> size, <span>${obfLevel}</span> pass${obfLevel>1?'es':''})`;
+                        showToast('🔒 Obfuscated successfully!', 'success');
+                    } catch(e) {
+                        showToast('Error: ' + e.message, 'error');
+                    }
+                    obfRunBtn.classList.remove('running');
+                    obfRunBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Obfuscate`;
+                }, 60);
+            });
+
+            obfClearBtn.addEventListener('click', () => {
+                obfInput.value = ''; obfOutput.value = '';
+                obfCopyOutBtn.disabled = true; obfSelectBtn.disabled = true;
+                obfStatsEl.innerHTML = '';
+            });
+            obfClearInputBtn.addEventListener('click', () => { obfInput.value = ''; });
+
+            obfSelectBtn.addEventListener('click', () => {
+                obfOutput.focus(); obfOutput.setSelectionRange(0, obfOutput.value.length);
+                const orig = obfSelectBtn.textContent;
+                obfSelectBtn.textContent = 'Selected ✓';
+                setTimeout(() => { obfSelectBtn.textContent = orig; }, 1800);
+            });
+
+            obfCopyOutBtn.addEventListener('click', () => {
+                const text = obfOutput.value;
+                const doFallback = () => {
+                    const ta = document.createElement('textarea');
+                    ta.value = text; ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+                    document.body.appendChild(ta); ta.focus(); ta.select();
+                    try { document.execCommand('copy'); showToast('Output copied!', 'success'); }
+                    catch { showToast('Copy failed', 'error'); }
+                    document.body.removeChild(ta);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => showToast('Output copied!', 'success')).catch(doFallback);
+                } else doFallback();
+            });
+
+            obfPasteBtn.addEventListener('click', async () => {
+                try { obfInput.value = await navigator.clipboard.readText(); }
+                catch { showToast('Clipboard access denied — paste manually (Ctrl+V)', 'error'); }
+            });
+        })();
     </script>
 </body>
 </html>
