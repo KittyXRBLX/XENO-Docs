@@ -1637,52 +1637,71 @@
             // YouTube has fully blocked all free clientside download APIs in 2025.
             // We fetch the video title/thumb from YouTube's oEmbed endpoint (no auth needed)
             // and show direct links to the best working free download sites.
-            // ── YouTube via p.oceansaver.in (the engine y2down.cc uses) ──────────
-            // Proxied through allorigins.win to bypass CORS on GitHub Pages
-            async function proxyFetch(url) {
-                const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
-                if (!r.ok) throw new Error('Proxy error ' + r.status);
-                return r.json();
+            // ── YouTube via p.oceansaver.in ──────────────────────────────────────
+            async function proxyFetch(targetUrl) {
+                // Try allorigins first, fall back to corsproxy.io
+                const proxies = [
+                    'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl),
+                    'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
+                ];
+                let lastErr;
+                for (const p of proxies) {
+                    try {
+                        const r = await fetch(p);
+                        if (!r.ok) { lastErr = 'HTTP ' + r.status; continue; }
+                        const text = await r.text();
+                        return JSON.parse(text);
+                    } catch (e) { lastErr = e.message; }
+                }
+                throw new Error('Proxy failed: ' + lastErr);
             }
 
-            async function fetchYouTube(url) {
+            async function fetchYouTube(rawUrl) {
                 setStatus('Starting download\u2026', 'loading');
 
-                const idMatch = url.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]{11})/);
+                // Extract clean video ID — strip any extra query params after the ID
+                const idMatch = rawUrl.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]{11})/);
                 const videoId = idMatch ? idMatch[1] : null;
+                // Use clean canonical URL to avoid encoding issues
+                const url = videoId
+                    ? 'https://www.youtube.com/watch?v=' + videoId
+                    : rawUrl;
+
                 let title = 'YouTube Video';
                 let thumb = videoId ? 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg' : null;
 
-                // Get real title + thumb from oEmbed (open CORS, no auth)
                 try {
                     const oe = await fetch('https://www.youtube.com/oembed?url=' + encodeURIComponent(url) + '&format=json');
                     if (oe.ok) { const m = await oe.json(); title = m.title || title; if (m.thumbnail_url) thumb = m.thumbnail_url; }
                 } catch {}
 
-                // Step 1: initiate job on oceansaver (no API key needed)
-                const initUrl = 'https://p.oceansaver.in/ajax/download.php?' + new URLSearchParams({ format: '1080', url, add_info: '1' });
+                // Build oceansaver URL manually to control encoding precisely
+                const initUrl = 'https://p.oceansaver.in/ajax/download.php'
+                    + '?format=1080'
+                    + '&url=' + encodeURIComponent(url)
+                    + '&add_info=1';
+
                 const init = await proxyFetch(initUrl);
-                if (!init.success || !init.id) throw new Error('Could not start download. The video may be unavailable or age-restricted.');
+                if (!init.success || !init.id) throw new Error('Could not start download. Video may be unavailable or private.');
 
                 const jobId = init.id;
-                // Use oceansaver title/thumb if better
                 if (init.info?.title) title = init.info.title;
                 if (init.info?.image) thumb = init.info.image;
 
-                // Step 2: poll progress until download_url is ready
                 let dlUrl = null;
                 setStatus('Processing\u2026 0%', 'loading');
                 for (let i = 0; i < 40; i++) {
                     await new Promise(r => setTimeout(r, 2500));
                     let prog;
-                    try { prog = await proxyFetch('https://p.oceansaver.in/ajax/progress?id=' + jobId); } catch { continue; }
+                    try {
+                        prog = await proxyFetch('https://p.oceansaver.in/ajax/progress?id=' + jobId);
+                    } catch { continue; }
                     if (prog.download_url) { dlUrl = prog.download_url; break; }
-                    if (prog.success === 0) throw new Error('Processing failed. Try a different video.');
-                    const pct = Math.round((prog.progress || 0) / 10);
-                    setStatus('Processing\u2026 ' + pct + '%', 'loading');
+                    if (prog.success === 0) throw new Error('Processing failed on server. Try a different video.');
+                    setStatus('Processing\u2026 ' + Math.round((prog.progress || 0) / 10) + '%', 'loading');
                 }
 
-                if (!dlUrl) throw new Error('Timed out. The video may be too long — try a shorter one.');
+                if (!dlUrl) throw new Error('Timed out. Try a shorter video.');
 
                 renderCard({
                     title, thumb,
