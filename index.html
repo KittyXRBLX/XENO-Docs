@@ -1,320 +1,216 @@
 <!DOCTYPE html>
-<html lang="en">    
-<head>    
-  <meta charset="UTF-8" />    
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />    
-  <title>XENO — Interactive Docs</title>    
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />    
-  <style>    
-    :root {    
-      --bg: #0a0a0f;    
-      --surface: #111118;    
-      --surface2: #18181f;    
-      --border: #2a2a38;    
-      --accent: #7c5cfc;    
-      --accent2: #a78bfa;    
-      --accent-glow: rgba(124,92,252,0.18);    
-      --text: #e8e8f0;    
-      --muted: #8888a0;    
-      --code-bg: #13131c;    
-      --header-h: 70px;    
-    }    
-    
-    * { box-sizing: border-box; margin: 0; padding: 0; }    
-    body {    
-      background: var(--bg);    
-      color: var(--text);    
-      font-family: 'Syne', sans-serif;    
-      height: 100vh;    
-      display: flex;    
-      flex-direction: column;    
-      overflow: hidden; 
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XENO | Documentation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0b0e;
+      --sidebar-bg: #0b0b0e;
+      --surface: #16161a;
+      --border: #23232a;
+      --accent: #a78bfa; /* Purple accent */
+      --text: #ffffff;
+      --text-muted: #94a3b8;
+      --header-h: 64px;
+      --sidebar-w: 280px;
     }
 
-    /* HEADER */
-    header {    
-      height: var(--header-h);    
-      background: rgba(10,10,15,0.92);    
-      border-bottom: 1px solid var(--border);    
-      backdrop-filter: blur(14px);    
-      display: flex; align-items: center; justify-content: space-between;    
-      padding: 0 40px;
-      z-index: 100;
-    }    
-    .logo {    
-      display: flex; align-items: center; gap: 12px;    
-      font-size: 1.5rem; font-weight: 800; color: var(--text); text-decoration: none;    
-    }    
-    .logo-icon {    
-      width: 36px; height: 36px; border-radius: 10px;    
-      background: linear-gradient(135deg, var(--accent), #c084fc);    
-      display: flex; align-items: center; justify-content: center;    
-      font-size: 1rem; font-weight: 900; color: #fff;    
-      box-shadow: 0 0 20px var(--accent-glow);    
-    }
-
-    /* STEP CONTAINER */
-    .viewport {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      padding: 20px;
-    }
-
-    .step-card {
-      width: 100%;
-      max-width: 900px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 40px;
-      display: none; /* Controlled by JS */
-      animation: slideIn 0.4s ease-out;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-
-    .step-card.active { display: block; }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* NAVIGATION */
-    .nav-controls {
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      background: var(--surface2);
-      padding: 12px 24px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    .nav-btn {
-      background: none;
-      border: none;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
       color: var(--text);
-      cursor: pointer;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: color 0.2s;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
     }
 
-    .nav-btn:disabled { color: var(--muted); cursor: not-allowed; }
-    .nav-btn:hover:not(:disabled) { color: var(--accent2); }
-
-    .step-indicator {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      color: var(--muted);
-      letter-spacing: 2px;
+    /* TOP NAVIGATION */
+    header {
+      height: var(--header-h);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; position: fixed; top: 0; width: 100%; z-index: 1000;
     }
 
-    /* CONTENT STYLING */
-    h1 { font-size: 2.5rem; margin-bottom: 10px; }
-    h2 { font-size: 1.5rem; color: var(--accent2); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-    p { color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .logo-icon { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; }
     
-    .code-wrap {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      position: relative;
-      margin-bottom: 20px;
-      overflow-x: auto;
+    .search-btn, .theme-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; }
+
+    /* BREADCRUMBS */
+    .breadcrumbs {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; color: var(--text-muted);
+      margin-bottom: 30px;
+    }
+    .breadcrumbs span:first-child { color: var(--accent); font-weight: 500; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: calc(100vh - var(--header-h));
+      position: fixed; top: var(--header-h); left: 0;
+      border-right: 1px solid var(--border);
+      padding: 24px; transition: transform 0.3s ease;
+      background: var(--bg); z-index: 999;
     }
 
-    .copy-btn {
-      position: absolute; top: 12px; right: 12px;
-      background: var(--surface2); border: 1px solid var(--border);
-      color: var(--muted); font-size: 0.7rem; padding: 4px 8px;
-      border-radius: 4px; cursor: pointer;
+    .nav-link {
+      display: block; padding: 10px 0; color: var(--text-muted);
+      text-decoration: none; font-size: 0.9rem; transition: 0.2s;
+    }
+    .nav-link.active { color: var(--text); font-weight: 600; }
+
+    /* MAIN CONTENT */
+    main {
+      margin-left: var(--sidebar-w);
+      padding: 100px 40px 60px;
+      max-width: 900px;
     }
 
-    .tag {
-        font-size: 0.7rem; background: rgba(124,92,252,0.15);
-        color: var(--accent2); padding: 2px 8px; border-radius: 4px;
-        text-transform: uppercase; font-weight: 700;
+    h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 16px; letter-spacing: -1px; }
+    .hero-text { font-size: 1.15rem; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+
+    /* BUTTONS */
+    .btn-copy {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 16px; border-radius: 8px;
+      display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
+      cursor: pointer; transition: 0.2s; font-weight: 500;
+    }
+    .btn-copy:hover { border-color: var(--accent); }
+
+    /* GRID CARDS */
+    .grid-label { font-size: 1.5rem; font-weight: 700; margin: 48px 0 20px; }
+    .card-grid {
+      display: grid; grid-template-columns: 1fr; gap: 16px;
     }
 
-    /* SCROLLBAR */
-    .step-card::-webkit-scrollbar { width: 6px; }
-    .step-card::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    .feature-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; transition: 0.2s;
+      text-decoration: none; color: inherit;
+    }
+    .feature-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .icon-box { color: var(--accent); margin-bottom: 16px; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; display: block; }
+    .card-desc { color: var(--text-muted); font-size: 0.95rem; }
 
-    .kw { color: #c084fc; }
-    .fn { color: #60a5fa; }
-    .str { color: #4ade80; }
-    .cmt { color: #4b5563; font-style: italic; }
+    /* MOBILE */
+    .menu-toggle { display: none; background: none; border: none; color: white; cursor: pointer; }
 
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); width: 100%; }
+      main { margin-left: 0; padding: 100px 20px 40px; }
+      .menu-toggle { display: block; }
+    }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">
-    <div class="logo-icon">X</div>
-    XENO
+  <div class="header-left">
+    <button class="menu-toggle" id="menuBtn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="logo-icon"></div>
+    <div style="font-weight: 700;">XENO</div>
   </div>
-  <div class="step-indicator" id="stepCounter">STEP 1 / 6</div>
+  <div>
+    <button class="search-btn">🔍</button>
+    <button class="theme-btn">✨</button>
+  </div>
 </header>
 
-<div class="viewport">
+<aside class="sidebar" id="sidebar">
+    <a href="#" class="nav-link active">Introduction</a>
+    <a href="#" class="nav-link">Getting Started</a>
+    <a href="#" class="nav-link">Elements</a>
+    <a href="#" class="nav-link">Configuration</a>
+</aside>
+
+<main>
+  <div class="breadcrumbs">
+    <span>Overview</span>
+    <span>&rsaquo;</span>
+    <span>Introduction</span>
+  </div>
+
+  <h1>Introduction</h1>
+  <p class="hero-text">XENO (2026) is a UI library for Roblox — open source, reliable, and built for production-grade scripts.</p>
   
-  <div class="step-card active" id="step1">
-    <span class="tag">Stage 01</span>
-    <h1>Initialization</h1>
-    <p>To begin, load the library and define your basic configuration. This ensures the environment is ready before elements are added.</p>
-    <div class="code-wrap">
-      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-      <pre>
-<span class="kw">local</span> XENO = <span class="fn-color">loadstring</span>(game:<span class="fn-color">HttpGet</span>(<span class="str">'...'</span>))()
+  <button class="btn-copy" onclick="copyLoadstring()">
+    <span>📋</span> Copy loadstring
+  </button>
 
-<span class="kw">local</span> XENOGUINAME = <span class="str">"Xeno Panel"</span>
-<span class="fn">wait</span>(<span class="num">6</span>) <span class="cmt">-- Essential for stability</span></pre>
+  <div class="grid-label">What's included</div>
+  
+  <div class="card-grid">
+    <div class="feature-card">
+      <div class="icon-box">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <span class="card-title">Production-ready</span>
+      <p class="card-desc">Stable across executor environments. Used in high-traffic production scripts daily.</p>
     </div>
+
+    <div class="feature-card">
+      <div class="icon-box">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+      </div>
+      <span class="card-title">Reliable</span>
+      <p class="card-desc">Stable and consistent performance. Built to handle complex script logic without lagging.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="icon-box">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/></svg>
+        </div>
+        <span class="card-title">Open source</span>
+        <p class="card-desc">Full source available on GitHub. Contributions from the community are always welcome.</p>
+      </div>
   </div>
 
-  <div class="step-card" id="step2">
-    <span class="tag">Stage 02</span>
-    <h1>Theming & Style</h1>
-    <p>XENO comes with built-in color profiles. You can set a global theme or add manual toggle buttons for users to choose their own style.</p>
-    <div class="code-wrap">
-      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-      <pre>
-<span class="cmt">-- Set a default theme</span>
-XENO:<span class="fn">SetTheme</span>(<span class="str">"Purple"</span>) 
+  <div class="grid-label">Get started</div>
 
-<span class="cmt">-- Add theme selection buttons</span>
-XENO:<span class="fn">AddThemeBtn</span>(<span class="str">"Purple"</span>, Themes.Purple.Accent1)
-XENO:<span class="fn">AddThemeBtn</span>(<span class="str">"Green"</span>, Themes.Green.Accent1)
-XENO:<span class="fn">AddThemeBtn</span>(<span class="str">"Blue"</span>, Themes.Blue.Accent1)</pre>
-    </div>
+  <div class="card-grid">
+    <a href="#" class="feature-card">
+      <div class="icon-box">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+      <span class="card-title">Load the library</span>
+      <p class="card-desc">One line of code to load XENO into your Roblox script.</p>
+    </a>
+
+    <a href="#" class="feature-card">
+      <div class="icon-box">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <span class="card-title">Create a window</span>
+      <p class="card-desc">Setup your first window, tabs, and functional sections.</p>
+    </a>
   </div>
 
-  <div class="step-card" id="step3">
-    <span class="tag">Stage 03</span>
-    <h1>Structure</h1>
-    <p>Organize your UI. Add a search bar for quick navigation and headers to categorize your features.</p>
-    <h2>🔍 AddSearchBar()</h2>
-    <div class="code-wrap">
-        <pre>XENO:<span class="fn">AddSearchBar</span>()</pre>
-    </div>
-    <h2>🏷️ AddHeader(title)</h2>
-    <div class="code-wrap">
-        <pre>XENO:<span class="fn">AddHeader</span>(<span class="str">"Combat Features"</span>)</pre>
-    </div>
-  </div>
-
-  <div class="step-card" id="step4">
-    <span class="tag">Stage 04</span>
-    <h1>Basic Controls</h1>
-    <p>Buttons and Switches are the backbone of any script. The third parameter <code>notify</code> determines if a toast alert appears.</p>
-    <h2>🔘 AddButton(label, callback, notify)</h2>
-    <div class="code-wrap">
-        <pre>XENO:<span class="fn">AddButton</span>(<span class="str">"Click Me"</span>, <span class="kw">function</span>() <span class="fn">print</span>(<span class="str">"Hi"</span>) <span class="kw">end</span>, <span class="kw">true</span>)</pre>
-    </div>
-    <h2>🔀 AddSwitch(label, callback, notify)</h2>
-    <div class="code-wrap">
-        <pre>XENO:<span class="fn">AddSwitch</span>(<span class="str">"Auto Farm"</span>, <span class="kw">function</span>(s) <span class="fn">print</span>(s) <span class="kw">end</span>, <span class="kw">true</span>)</pre>
-    </div>
-  </div>
-
-  <div class="step-card" id="step5">
-    <span class="tag">Stage 05</span>
-    <h1>Variables & Ranges</h1>
-    <p>Use Sliders for numbers and TextBoxes for custom strings. Both support anti-spam notifications.</p>
-    <h2>🎚️ AddSlider(label, min, max, default, callback, notify)</h2>
-    <div class="code-wrap">
-        <pre>XENO:<span class="fn">AddSlider</span>(<span class="str">"WalkSpeed"</span>, <span class="num">16</span>, <span class="num">100</span>, <span class="num">16</span>, <span class="kw">function</span>(v) ... <span class="kw">end</span>, <span class="kw">true</span>)</pre>
-    </div>
-    <h2>✏️ AddTextBox(label, placeholder, default, callback, notify)</h2>
-    <div class="code-wrap">
-        <pre>XENO:<span class="fn">AddTextBox</span>(<span class="str">"Player"</span>, <span class="str">"Name..."</span>, <span class="str">""</span>, <span class="kw">function</span>(t) ... <span class="kw">end</span>, <span class="kw">false</span>)</pre>
-    </div>
-  </div>
-
-  <div class="step-card" id="step6">
-    <span class="tag">Stage 06</span>
-    <h1>Hotkeys</h1>
-    <p>Let users trigger functions using their keyboard. Displayed clearly in the sidebar for easy reference.</p>
-    <h2>⌨️ AddKeybind(label, keyCode, callback, notify)</h2>
-    <div class="code-wrap">
-      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-      <pre>
-XENO:<span class="fn">AddKeybind</span>(
-    <span class="str">"Toggle UI"</span>, 
-    Enum.KeyCode.RightControl, 
-    <span class="kw">function</span>() ToggleUI() <span class="kw">end</span>, 
-    <span class="kw">true</span>
-)</pre>
-    </div>
-  </div>
-
-  <div class="nav-controls">
-    <button class="nav-btn" id="prevBtn" disabled>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-      PREVIOUS
-    </button>
-    <button class="nav-btn" id="nextBtn">
-      NEXT
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
-    </button>
-  </div>
-
-</div>
+</main>
 
 <script>
-  let currentStep = 1;
-  const totalSteps = 6;
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const counter = document.getElementById('stepCounter');
+  // Mobile Sidebar Toggle
+  const menuBtn = document.getElementById('menuBtn');
+  const sidebar = document.getElementById('sidebar');
 
-  function updateSteps() {
-    document.querySelectorAll('.step-card').forEach(card => card.classList.remove('active'));
-    document.getElementById(`step${currentStep}`).classList.add('active');
-    
-    counter.innerText = `STEP ${currentStep} / ${totalSteps}`;
-    
-    prevBtn.disabled = currentStep === 1;
-    nextBtn.disabled = currentStep === totalSteps;
-  }
-
-  prevBtn.addEventListener('click', () => {
-    if(currentStep > 1) {
-      currentStep--;
-      updateSteps();
-    }
+  menuBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
   });
 
-  nextBtn.addEventListener('click', () => {
-    if(currentStep < totalSteps) {
-      currentStep++;
-      updateSteps();
-    }
-  });
-
-  function copyCode(btn) {
-    const pre = btn.nextElementSibling;
-    navigator.clipboard.writeText(pre.innerText).then(() => {
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 2000);
+  // Loadstring Copy Logic
+  function copyLoadstring() {
+    const code = `local XENO = loadstring(game:HttpGet(('https://raw.githubusercontent.com/zxkuhl/XENO/refs/heads/main/XENO')))()`;
+    navigator.clipboard.writeText(code).then(() => {
+      alert("Loadstring copied to clipboard!");
     });
   }
 </script>
